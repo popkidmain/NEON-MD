@@ -23,8 +23,8 @@ async (conn, mek, m, { from, quoted, q, react, reply, isSuperUser, isOwner, setC
     }
 
     // repo settings (change if you want different repo/branch)
-    const repoOwner = "hostdeployment-bit";
-    const repoName = "POPKID-XD";
+    const repoOwner = "popkidmain";
+    const repoName = "NEON-MD";
     const branch = "main";
     const apiCommitUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/commits/${branch}`;
     const zipUrl = `https://github.com/${repoOwner}/${repoName}/archive/${branch}.zip`;
