@@ -1,82 +1,51 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const { cmd } = require("../command");
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
 
 cmd({
   pattern: "vv",
-  alias: ["viewonce", "vo", "reveal"],
+  alias: ["viewonce", "viewmedia", "vo"],
   react: '👁',
-  desc: "Reveal view once messages",
+  desc: "Re-send a view once image or video",
   category: "utility",
   use: ".vv [reply to view once message]",
   filename: __filename
-}, async (conn, mek, m, { from, reply, isOwner }) => {
+}, async (conn, mek, m, { from, reply }) => {
   try {
-    const ctxInfo = mek.message?.extendedTextMessage?.contextInfo;
-    const quotedMsg = ctxInfo?.quotedMessage;
+    const quoted = mek.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const quotedImage = quoted?.imageMessage;
+    const quotedVideo = quoted?.videoMessage;
 
-    if (!quotedMsg) {
-      return reply("❌ Reply to a view once message with .vv");
-    }
+    if (quotedImage && quotedImage.viewOnce) {
+      const stream = await downloadContentFromMessage(quotedImage, 'image');
+      let buffer = Buffer.from([]);
+      for await (const chunk of stream)
+        buffer = Buffer.concat([buffer, chunk]);
 
-    // Detect view once type
-    const viewOnceMsg =
-      quotedMsg?.viewOnceMessage?.message ||
-      quotedMsg?.viewOnceMessageV2?.message ||
-      quotedMsg?.viewOnceMessageV2Extension?.message ||
-      null;
-
-    if (!viewOnceMsg) {
-      return reply("❌ That is not a view once message.");
-    }
-
-    const mtype = Object.keys(viewOnceMsg)[0];
-
-    const typeMap = {
-      imageMessage: { mediaType: 'image', ext: '.jpg', label: 'Image' },
-      videoMessage: { mediaType: 'video', ext: '.mp4', label: 'Video' },
-      audioMessage: { mediaType: 'audio', ext: '.mp3', label: 'Audio' },
-    };
-
-    const matched = typeMap[mtype];
-    if (!matched) return reply("❌ Unsupported view once media type.");
-
-    await reply("⏳ Retrieving view once media...");
-
-    // Download
-    const stream = await downloadContentFromMessage(viewOnceMsg[mtype], matched.mediaType);
-    const chunks = [];
-    for await (const chunk of stream) chunks.push(chunk);
-    const mediaBuffer = Buffer.concat(chunks);
-
-    const caption = viewOnceMsg[mtype]?.caption || '';
-
-    // Send based on type
-    if (mtype === 'imageMessage') {
       await conn.sendMessage(from, {
-        image: mediaBuffer,
-        caption: caption || '👁 *View Once Image*\n\n> *popkid*'
+        image: buffer,
+        fileName: 'media.jpg',
+        caption: quotedImage.caption || '👁 *View Once Image*\n\n> *popkid*'
       }, { quoted: mek });
 
-    } else if (mtype === 'videoMessage') {
+    } else if (quotedVideo && quotedVideo.viewOnce) {
+      const stream = await downloadContentFromMessage(quotedVideo, 'video');
+      let buffer = Buffer.from([]);
+      for await (const chunk of stream)
+        buffer = Buffer.concat([buffer, chunk]);
+
       await conn.sendMessage(from, {
-        video: mediaBuffer,
-        caption: caption || '👁 *View Once Video*\n\n> *popkid*',
-        mimetype: 'video/mp4'
+        video: buffer,
+        fileName: 'media.mp4',
+        mimetype: 'video/mp4',
+        caption: quotedVideo.caption || '👁 *View Once Video*\n\n> *popkid*'
       }, { quoted: mek });
 
-    } else if (mtype === 'audioMessage') {
-      await conn.sendMessage(from, {
-        audio: mediaBuffer,
-        mimetype: 'audio/mp4',
-        ptt: viewOnceMsg[mtype]?.ptt || false
-      }, { quoted: mek });
+    } else {
+      await reply("❌ Please reply to a view once image or video.");
     }
 
   } catch (error) {
     console.error("vv error:", error);
-    await reply(`❌ Error: ${error.message || error}`);
+    await reply("❌ Failed to retrieve view once media. Please try again.");
   }
 });
