@@ -18,30 +18,38 @@ async (conn, mek, m, { from, sender, reply }) => {
             return reply("❌ Reply to a *view-once image or video*.");
         }
 
-        // Handle view-once wrapper (Baileys v6+)
-        const viewOnceMsg =
+        // ✅ FIX 1: Correctly detect view-once wrapper
+        const viewOnceWrapper =
             quoted.viewOnceMessageV2 ||
             quoted.viewOnceMessage ||
             null;
 
+        // ✅ FIX 2: Pull the media message from the wrapper (or fallback to direct)
         const mediaMessage =
-            viewOnceMsg?.message?.imageMessage ||
-            viewOnceMsg?.message?.videoMessage ||
+            viewOnceWrapper?.message?.imageMessage ||
+            viewOnceWrapper?.message?.videoMessage ||
             quoted.imageMessage ||
-            quoted.videoMessage;
+            quoted.videoMessage ||
+            null;
 
         if (!mediaMessage) {
-            return reply("❌ Unsupported message type.");
+            return reply("❌ No image or video found in the replied message.");
         }
 
-        const isImage = !!mediaMessage.imageMessage || mediaMessage.mimetype?.startsWith("image");
-        const isVideo = !!mediaMessage.videoMessage || mediaMessage.mimetype?.startsWith("video");
+        // ✅ FIX 3: Determine type by mimetype only (mediaMessage IS the image/video object)
+        const isImage = mediaMessage.mimetype?.startsWith("image");
+        const isVideo = mediaMessage.mimetype?.startsWith("video");
 
-        if (!mediaMessage.viewOnce) {
-            return reply("❌ This is not a view-once media.");
+        if (!isImage && !isVideo) {
+            return reply("❌ Unsupported media type: " + (mediaMessage.mimetype || "unknown"));
         }
 
-        // Ping-style reaction
+        // ✅ FIX 4: Check viewOnce on the WRAPPER, not the media message
+        if (!viewOnceWrapper) {
+            return reply("❌ This is not a view-once message.");
+        }
+
+        // Random reaction emoji
         const reactionEmojis = ['🔥','⚡','🚀','💨','🎯','🎉','🌟','💥','👁️'];
         const reactEmoji = reactionEmojis[Math.floor(Math.random() * reactionEmojis.length)];
 
@@ -49,21 +57,19 @@ async (conn, mek, m, { from, sender, reply }) => {
             react: { text: reactEmoji, key: mek.key }
         });
 
-        // Download media
-        const stream = await downloadContentFromMessage(
-            mediaMessage,
-            isImage ? "image" : "video"
-        );
+        // ✅ FIX 5: Download using correct type string
+        const mediaType = isImage ? "image" : "video";
+        const stream = await downloadContentFromMessage(mediaMessage, mediaType);
 
         let buffer = Buffer.from([]);
         for await (const chunk of stream) {
             buffer = Buffer.concat([buffer, chunk]);
         }
 
-        // Send revealed media (NOT view-once)
+        // Send revealed media
         await conn.sendMessage(from, {
-            [isImage ? "image" : "video"]: buffer,
-            caption: mediaMessage.caption || '',
+            [mediaType]: buffer,
+            caption: mediaMessage.caption || '👁️ *View-Once Revealed*',
             contextInfo: {
                 mentionedJid: [sender],
                 forwardingScore: 999,
@@ -78,6 +84,6 @@ async (conn, mek, m, { from, sender, reply }) => {
 
     } catch (err) {
         console.error("VV Command Error:", err);
-        reply("❌ Failed to reveal view-once media.");
+        reply(`❌ Failed to reveal view-once media.\n\`${err.message}\``);
     }
 });
