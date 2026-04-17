@@ -62,6 +62,9 @@ const os = require('os')
 const Crypto = require('crypto')
 const path = require('path')
 
+// ✅ ANTIDELETE IMPORT
+const { AntideleteHandler } = require('./lib/antidelete')
+
 const ownerNumber = ['254732297194']
 const sessionDir = path.join(__dirname, 'sessions');
 
@@ -219,6 +222,11 @@ async function connectToWA() {
 
         if (config.READ_MESSAGE === 'true') await conn.readMessages([mek.key]);
         await saveMessage(mek);
+
+        // ✅ ANTIDELETE HANDLER — called here for every message
+        if (config.ANTIDELETE && config.ANTIDELETE !== 'false') {
+            await AntideleteHandler(conn, mek)
+        }
 
         const m = sms(conn, mek)
         const body = (type === 'conversation') ? mek.message.conversation : (type === 'extendedTextMessage') ? mek.message.extendedTextMessage.text : (type == 'imageMessage') && mek.message.imageMessage.caption ? mek.message.imageMessage.caption : (type == 'videoMessage') && mek.message.videoMessage.caption ? mek.message.videoMessage.caption : ''
