@@ -3,7 +3,7 @@ const axios = require('axios');
 const config = require('../config');
 
 cmd({
-    pattern: "play",
+    pattern: "play2",
     alias: ["song", "audio"],
     desc: "YouTube Audio Player (Elite Engine)",
     category: "download",
