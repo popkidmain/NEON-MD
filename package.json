@@ -10,7 +10,7 @@
     "restart": "pm2 restart POPKID-MD"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "npm:@popkidmd/popkidmd-baileys@1.4.0",
+    "@whiskeysockets/baileys": "npm:gifted-baileys@2.0.6",
     "@distube/ytdl-core": "^4.15.1",
     "@adiwajshing/keyed-db": "^0.2.4",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
