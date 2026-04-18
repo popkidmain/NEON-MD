@@ -3,8 +3,10 @@ const yts = require('yt-search');
 const { execFile } = require('child_process');
 const fs = require('fs');
 
+const YTDLP = '/data/data/com.termux/files/usr/bin/yt-dlp';
+
 const ytdlp = (url) => new Promise((resolve, reject) => {
-    execFile('yt-dlp', [
+    execFile(YTDLP, [
         '-x', '--audio-format', 'mp3',
         '-o', `${process.env.HOME}/%(id)s.%(ext)s`,
         '--print', 'after_move:filepath',
@@ -19,7 +21,7 @@ const ytdlp = (url) => new Promise((resolve, reject) => {
 });
 
 commands.push({
-    pattern: 'playpop',
+    pattern: 'marion',
     alias: ['plays', 'music'],
     react: '🎵',
     desc: 'Search and download a song as MP3 from YouTube',
